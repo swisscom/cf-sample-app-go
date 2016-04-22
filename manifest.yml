@@ -1,0 +1,7 @@
+applications:
+- name: go-demo-app 
+  buildpack: binary_buildpack
+  memory: 256M
+  instances: 1
+  path: ./bin/
+  command: ./gocf   
