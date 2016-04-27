@@ -3,17 +3,13 @@ package main
 import (
 	"fmt"
 	"log"
-	"log/syslog"
 	"net/http"
 	"os"
-
-	_ "github.com/go-sql-driver/mysql"
 )
 
 var (
 	buildstamp string
 	githash    string
-	rlog       *syslog.Writer
 )
 
 func main() {
@@ -32,7 +28,7 @@ func main() {
 }
 
 func defaultHandler(w http.ResponseWriter, req *http.Request) {
-	fmt.Fprintln(w, "hello swisscom cloud!")
+	fmt.Fprintln(w, "hello Swisscom cloud!")
 }
 
 func infoHandler(w http.ResponseWriter, req *http.Request) {
