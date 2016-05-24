@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 
+	cfenv "github.com/cloudfoundry-community/go-cfenv"
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -23,7 +24,7 @@ func main() {
 		port = "4000"
 	}
 
-	cStr := getConnectionStr()
+	cStr := getConnectionStr("mydb")
 	log.Printf("Connect str %s ", cStr)
 	db, err := sql.Open("mysql", cStr)
 	if err != nil {
@@ -48,14 +49,22 @@ func main() {
 
 }
 
-func getConnectionStr() string {
-	databaseUrl := os.Getenv("DATABASE_URL")
-	if databaseUrl == "" {
-		databaseUrl = "mysql2://userName:userPass@127.0.0.1:3306/72C61CC6BEED?reconnect=true"
+func getConnectionStr(n string) string {
+	appEnv, err := cfenv.Current()
+	if err != nil {
+		log.Fatal("hr")
 	}
-	u, err := url.Parse(databaseUrl)
+	mysqlService, err := appEnv.Services.WithName(n)
 	if err != nil {
 		log.Fatal(err)
+	}
+	uri, ok := mysqlService.Credentials["uri"].(string)
+	if !ok {
+		log.Fatal("No valid MariabDB uri\n")
+	}
+	u, err := url.Parse(uri)
+	if err != nil {
+		log.Fatal("No valid MariabDB uri\n")
 	}
 	return fmt.Sprintf("%s@tcp(%s)%s", u.User.String(), u.Host, u.Path)
 }
