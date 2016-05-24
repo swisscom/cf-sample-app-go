@@ -5,3 +5,5 @@ applications:
   instances: 1
   path: ./bin/
   command: ./gocf   
+  services:
+  - mydb
