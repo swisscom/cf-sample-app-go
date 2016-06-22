@@ -1,6 +1,6 @@
-# CF Sample App Python
+# CF Sample App Go
 
-A sample  application to deploy to Cloud Foundry which works out of the box.
+A sample Go application to deploy to Cloud Foundry which works out of the box.
 
 ## Run locally
 
