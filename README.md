@@ -1,18 +1,14 @@
 # CF Sample App Go
 
-A sample Go application to deploy to Cloud Foundry which works out of the box.
+A sample [Go](https://golang.org/) application to deploy to Cloud Foundry which works out of the box.
 
 ## Run locally
 
-## Prerequisites
-
-The following assumes you have a working, recent version of Go installed, and
-you have a properly set-up Go workspace. Working on osx will require crosscompile. 
-
- * Install go 
- * Install docker for local development system
- * Registered to public or selfhosted CF service
-
+1. Install [Go](https://golang.org/doc/install)
+1. Run `go run main.go`
+1. Visit <http://localhost:4000>
 
 ## Run in the cloud
 
+1. Run `cf push my-go-app --random-route`
+1. Visit the given URL
