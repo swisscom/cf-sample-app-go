@@ -7,6 +7,7 @@ import (
 	"os"
 )
 
+// indexHandler returns a simple message
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Congratulations! Welcome to the Swisscom Application Cloud!")
 }
