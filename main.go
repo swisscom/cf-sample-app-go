@@ -21,15 +21,14 @@ type Kitten struct {
 	Name string        `json:"name"`
 }
 
-var dbString string
+// Controller is a server with an mgo session
+type Controller struct {
+	session *mgo.Session
+}
 
-// kittenHandler allows to manage kittnes
-func kittenHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := mgo.Dial(dbString)
-	if err != nil {
-		handleError(w, err)
-	}
-	defer session.Close()
+// kittenHandler allows to manage kittens
+func (controller *Controller) kittenHandler(w http.ResponseWriter, r *http.Request) {
+	session := controller.session.Clone()
 	c := session.DB("").C("kittens")
 
 	switch r.Method {
@@ -37,15 +36,17 @@ func kittenHandler(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		var kittens []Kitten
 
-		err = c.Find(bson.M{}).All(&kittens)
+		err := c.Find(bson.M{}).All(&kittens)
 		if err != nil {
-			handleError(w, err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
-		w.Header().Set("Content-type", "application/json; charset=utf-8")
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		err = json.NewEncoder(w).Encode(kittens)
 		if err != nil {
-			handleError(w, err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
 	case "POST":
@@ -53,11 +54,13 @@ func kittenHandler(w http.ResponseWriter, r *http.Request) {
 
 		body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
 		if err != nil {
-			handleError(w, err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		err = r.Body.Close()
 		if err != nil {
-			handleError(w, err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		err = json.Unmarshal(body, &kitten)
 		if err != nil {
@@ -66,7 +69,8 @@ func kittenHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		err = c.Insert(kitten)
 		if err != nil {
-			handleError(w, err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
 		w.WriteHeader(http.StatusCreated)
@@ -82,18 +86,13 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "I am awesome!")
 }
 
-// handleError handles fatal errors
-func handleError(w http.ResponseWriter, err error) {
-	http.Error(w, err.Error(), http.StatusInternalServerError)
-	log.Fatalln(err.Error())
-}
-
 func main() {
 	var port string
 	if port = os.Getenv("PORT"); len(port) == 0 {
 		port = "8080"
 	}
 
+	var dbString string
 	if vcapServices := os.Getenv("VCAP_SERVICES"); len(vcapServices) == 0 {
 		dbString = "localhost"
 	} else {
@@ -111,8 +110,15 @@ func main() {
 		}
 		dbString = uri
 	}
+	session, err := mgo.Dial(dbString)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer session.Close()
+
+	c := Controller{session: session}
 
 	http.HandleFunc("/", indexHandler)
-	http.HandleFunc("/kittens", kittenHandler)
+	http.HandleFunc("/kittens", c.kittenHandler)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
