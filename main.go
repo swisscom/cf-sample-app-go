@@ -3,16 +3,14 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 
-	mgo "gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	"github.com/cloudfoundry-community/go-cfenv"
 
-	cfenv "github.com/cloudfoundry-community/go-cfenv"
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 )
 
 // Kitten is a cute kitty
@@ -21,20 +19,24 @@ type Kitten struct {
 	Name string        `json:"name"`
 }
 
-// Controller is a server with an mgo session
-type Controller struct {
-	session *mgo.Session
+// Kittens is an array of kittens
+type Kittens []Kitten
+
+// Server is a server with an mgo session
+type Server struct {
+	db *mgo.Session
 }
 
-// kittenHandler allows to manage kittens
-func (controller *Controller) kittenHandler(w http.ResponseWriter, r *http.Request) {
-	session := controller.session.Clone()
-	c := session.DB("").C("kittens")
+// KittenHandler allows to manage kittens
+func (s *Server) KittenHandler(w http.ResponseWriter, r *http.Request) {
+	sess := s.db.Clone()
+	defer sess.Close()
+	c := sess.DB("").C("kittens")
 
 	switch r.Method {
 
 	case "GET":
-		var kittens []Kitten
+		var kittens Kittens
 
 		err := c.Find(bson.M{}).All(&kittens)
 		if err != nil {
@@ -43,6 +45,7 @@ func (controller *Controller) kittenHandler(w http.ResponseWriter, r *http.Reque
 		}
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
 		err = json.NewEncoder(w).Encode(kittens)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -52,28 +55,21 @@ func (controller *Controller) kittenHandler(w http.ResponseWriter, r *http.Reque
 	case "POST":
 		var kitten Kitten
 
-		body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
+		err := json.NewDecoder(r.Body).Decode(&kitten)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		err = r.Body.Close()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		err = json.Unmarshal(body, &kitten)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
-			return
-		}
+
 		err = c.Insert(kitten)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
+		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		w.WriteHeader(http.StatusCreated)
+
 		fmt.Fprintf(w, "Kitten '%s' created", kitten.Name)
 
 	default:
@@ -81,17 +77,12 @@ func (controller *Controller) kittenHandler(w http.ResponseWriter, r *http.Reque
 	}
 }
 
-// indexHandler returns a simple message
-func indexHandler(w http.ResponseWriter, r *http.Request) {
+// IndexHandler returns a simple message
+func IndexHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "I am awesome!")
 }
 
 func main() {
-	var port string
-	if port = os.Getenv("PORT"); len(port) == 0 {
-		port = "8080"
-	}
-
 	var dbString string
 	if vcapServices := os.Getenv("VCAP_SERVICES"); len(vcapServices) == 0 {
 		dbString = "localhost"
@@ -106,7 +97,7 @@ func main() {
 		}
 		uri, ok := dbService.Credentials["uri"].(string)
 		if !ok {
-			log.Fatal("No valid databse URI found")
+			log.Fatal("no valid databse URI found")
 		}
 		dbString = uri
 	}
@@ -116,9 +107,14 @@ func main() {
 	}
 	defer session.Close()
 
-	c := Controller{session: session}
+	s := Server{db: session}
 
-	http.HandleFunc("/", indexHandler)
-	http.HandleFunc("/kittens", c.kittenHandler)
+	http.HandleFunc("/", IndexHandler)
+	http.HandleFunc("/kittens", s.KittenHandler)
+
+	var port string
+	if port = os.Getenv("PORT"); len(port) == 0 {
+		port = "8080"
+	}
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
