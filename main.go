@@ -7,17 +7,17 @@ import (
 	"os"
 )
 
-// indexHandler returns a simple message
-func indexHandler(w http.ResponseWriter, r *http.Request) {
+// IndexHandler returns a simple message
+func IndexHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Congratulations! Welcome to the Swisscom Application Cloud!")
 }
 
 func main() {
+	http.HandleFunc("/", IndexHandler)
+
 	var port string
 	if port = os.Getenv("PORT"); len(port) == 0 {
 		port = "8080"
 	}
-
-	http.HandleFunc("/", indexHandler)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
