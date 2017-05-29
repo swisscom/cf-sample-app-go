@@ -11,5 +11,6 @@ A sample [Go](https://golang.org/) application to deploy to Cloud Foundry which 
 ## Run in the cloud
 
 1. Run `cf create-service mongodb small my-mongodb`
+1. Wait about 3 minutes until the MongoDB is ready
 1. Run `cf push my-go-app --random-route`
 1. Visit the given URL
