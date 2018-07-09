@@ -2,8 +2,10 @@
 applications:
 - name: my-go-app
   memory: 64M
-
-  host: my-random-hostname
+  env:
+    GOPACKAGENAME: github.com/swisscom/cf-sample-app-dep
+  routes:
+    - route: my-go-app.scapp.io
 
   services:
   - my-mongodb
