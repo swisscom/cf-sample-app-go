@@ -10,5 +10,5 @@ A sample [Go](https://golang.org/) application to deploy to Cloud Foundry which 
 
 ## Run in the cloud
 
-1. Run `cf push my-go-app -m 64M --random-route`
+1. Run `cf push my-go-app -m 128M --random-route`
 1. Visit the given URL
